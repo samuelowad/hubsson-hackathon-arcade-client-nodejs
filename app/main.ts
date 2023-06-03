@@ -18,6 +18,7 @@ gameClient.onGameUpdate((gameState: GameState): void => {
 	const otherPlayers = players.filter((user) => user.playerId !== config.id);
 	const myLastCod = players.find((user) => user.playerId === config.id).coordinates.pop();
 	const otherUserLastCod = otherPlayers[0].coordinates.pop();
+	console.log('I need this',{myLastCod, otherUserLastCod})
 
 	const currentPlayer = players.find((user) => user.playerId === config.id)
 	// const otherUserLastCod = otherUsers[0].coordinates.pop();
@@ -25,9 +26,23 @@ gameClient.onGameUpdate((gameState: GameState): void => {
 	//diffrence from other user and my last cod x  cord must be 3 > than my last cod x cord
 
 
+	let closestCoordinate = null;
+	let minDistance = Infinity;
 
-	const closestX = Math.min(...otherPlayers.map(player => Math.abs(player.coordinates.pop().x - myLastCod.x)));
-	const closestY = Math.min(...otherPlayers.map(player => Math.abs(player.coordinates.pop().y - myLastCod.y)));
+	otherPlayers.forEach(player => {
+		player.coordinates.forEach(coordinate => {
+			const distance = Math.sqrt((coordinate.x - myLastCod.x) ** 2 + (coordinate.y - myLastCod.y) ** 2);
+			if (distance < minDistance) {
+				minDistance = distance;
+				closestCoordinate = coordinate;
+			}
+		});
+	});
+
+	const closestX = closestCoordinate.x;
+	const closestY = closestCoordinate.y;
+
+	const closeTOEnemy = myLastCod.x+2>=closestX && myLastCod.y+2>=closestY;
 
 
 	const notOutOfBounds = (!(myLastCod.x <= 3|| myLastCod.y <= 3) && !(myLastCod.x+3 >= width || myLastCod.y >= height - 3));
@@ -40,20 +55,42 @@ gameClient.onGameUpdate((gameState: GameState): void => {
 	}
 	else {
 		if (notOutOfBounds) {
+			console.log("close to enemy", closeTOEnemy)
 
-			if (myLastCod.x + 2 <= closestX && myLastCod.y + 2 <= closestY) {
+			if (myLastCod.x + 2 <= closestX && myLastCod.y + 2 <= closestY && closeTOEnemy) {
 				console.log('Up');
 				return gameClient.sendAction(Direction.UP, gameState.iteration);
-			} else if (myLastCod.x + 2 <= closestX && myLastCod.y - 2 <= closestY) {
+			} else if (myLastCod.x + 2 <= closestX && myLastCod.y - 2 <= closestY&& closeTOEnemy) {
 				console.log('Down');
 				return gameClient.sendAction(Direction.DOWN, gameState.iteration);
-			} else if (myLastCod.y + 2 <= closestY && myLastCod.x + 2 <= closestX) {
+			} else if (myLastCod.y + 2 <= closestY && myLastCod.x + 2 <= closestX&& closeTOEnemy) {
 				console.log('Left');
 				return gameClient.sendAction(Direction.LEFT, gameState.iteration);
-			} else  if (myLastCod.y +2 <= closestY && myLastCod.x - 2 <= closestX) {
+			} else  if (myLastCod.y +2 <= closestY && myLastCod.x - 2 <= closestX&& closeTOEnemy) {
 				console.log('Right');
 				return gameClient.sendAction(Direction.RIGHT, gameState.iteration);
-			}else {
+			}else if(myLastCod.y + 2 >= closestY && myLastCod.x + 2 >= closestX && closeTOEnemy){
+				console.log('Up one');
+				return gameClient.sendAction(Direction.UP, gameState.iteration);
+			}else if(myLastCod.y + 2 >= closestY && myLastCod.x - 2 >= closestX && closeTOEnemy){
+				console.log('Down');
+				return gameClient.sendAction(Direction.DOWN, gameState.iteration);
+			}else if(closeTOEnemy && closestY <= myLastCod.y+1 && myLastCod.x + 1 >= width) {
+				console.log('please left')
+				return gameClient.sendAction(Direction.LEFT, gameState.iteration);
+			}else if(closeTOEnemy && closestY <= myLastCod.y-1 && myLastCod.x + 1 >= width) {
+				console.log('please left')
+				return gameClient.sendAction(Direction.LEFT, gameState.iteration);
+			}else if(closeTOEnemy && closestY <= myLastCod.y+1 && myLastCod.x - 1 <=0) {
+				console.log('please left')
+				return gameClient.sendAction(Direction.LEFT, gameState.iteration);
+			}else if(closeTOEnemy && closestX <= myLastCod.x-1 && myLastCod.y - 1 <=0) {
+				console.log('please Up')
+				return gameClient.sendAction(Direction.UP, gameState.iteration);
+			}else if(closeTOEnemy && closestX <= myLastCod.x+1 && myLastCod.y - 1 <=0 && myLastCod.y - 1 !== closestY) {
+				console.log('please Up')
+				return gameClient.sendAction(Direction.UP, gameState.iteration);
+			}{
 				return
 			}
 		}
@@ -65,14 +102,15 @@ gameClient.onGameUpdate((gameState: GameState): void => {
 			if((myLastCod.x <= 3  && !fixY) || width - 3 <= myLastCod.x ) {
 				fixY = true
 				if ((myLastCod.y + 1 > closestY || closestY > (myLastCod.y+1)+2) &&  (width  > (myLastCod.x +2)  &&  myLastCod.x - 2 >= 2)) {
-					const dire = lastDirection === Direction.RIGHT && !xCodOutOfBounds ? Direction.UP : Direction.RIGHT
+					const dire = lastDirection === Direction.RIGHT && !xCodOutOfBounds && closeTOEnemy ? Direction.UP : Direction.RIGHT
 					lastDirection = dire
-					console.log('Up');
+					console.log('Up, ooo');
 					return gameClient.sendAction(dire, gameState.iteration);
 				} else if ((myLastCod.y - 1 < closestY || closestY > (myLastCod.y-1)-2) &&  (width  > (myLastCod.x +2)  &&  myLastCod.x + 2 >= 2)) {
-					const dire = lastDirection === Direction.LEFT && !xCodOutOfBounds ? Direction.DOWN : Direction.LEFT
+					let dire: Direction.DOWN | Direction.LEFT | Direction.UP = lastDirection === Direction.LEFT && !xCodOutOfBounds ? Direction.DOWN : Direction.LEFT
+					if(myLastCod.x +2 > 98 && lastDirection === Direction.RIGHT) dire = Direction.UP
 					lastDirection = dire
-					console.log('Down');
+					console.log('Down?,', dire);
 					return gameClient.sendAction(dire, gameState.iteration);
 				}
 			} else if((myLastCod.y <= 4 && !fixX) || height - 4 <= myLastCod.y) {
@@ -89,6 +127,18 @@ gameClient.onGameUpdate((gameState: GameState): void => {
 					console.log('Left', {dire});
 					return gameClient.sendAction(dire,gameState.iteration);
 				}
+			}else if(yCodOutOfBounds && myLastCod.x+1== width){
+				console.log('go left');
+				return gameClient.sendAction(Direction.LEFT,gameState.iteration);
+			}else  if(yCodOutOfBounds && myLastCod.x-1 == 0) {
+				console.log('go right');
+				return gameClient.sendAction(Direction.RIGHT, gameState.iteration);
+			}else if(xCodOutOfBounds && myLastCod.y+1== height) {
+				console.log('go up');
+				return gameClient.sendAction(Direction.UP, gameState.iteration);
+			}else if(xCodOutOfBounds && myLastCod.y-1== 0) {
+				console.log('go down');
+				return gameClient.sendAction(Direction.DOWN, gameState.iteration);
 			}
 		}
 	}
