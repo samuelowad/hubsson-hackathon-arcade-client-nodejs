@@ -3,7 +3,7 @@ name: Build and Push image to Azure - Client
 on:
   push:
     branches:
-      - release
+      - main
 
 env:
   TEAM_IMAGE: client-team
